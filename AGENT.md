@@ -1,24 +1,12 @@
 # Cyber Kitchen Web repository guide
 
-## Purpose
+## Working instructions
 
-Cyber Kitchen Web is the responsive browser client for the household meal decision and cooking product.
-
-## Architecture
-
-- Maintain a React + TypeScript + Vite single-page application; the current product uses client-managed views and local fixtures rather than backend requests.
-- Keep backend contracts behind typed client boundaries when API integration begins; the backend lives in `arturo-and-artura/cyber-kitchen`.
-- `App.tsx` owns view state and persisted product state.
-- Screen components live in `src/components`; fixtures in `src/data`; deterministic state helpers in `src/lib`.
-- Keep recommendation explanations explicit. Do not imply that current recommendations use a live AI service.
-- Keep allergy constraints visible at decision points and never provide a recommendation that violates them.
-- Persist local product state under one versioned storage key. Inventory consumption must be deterministic and previewed before commit.
-
-## Design and accessibility
-
-- Preserve semantic headings, labels, keyboard focus states, sufficient contrast, and reduced-motion behavior.
+- Read [the documentation index](.aidoc/INDEX.md) and [MVP product flow](.aidoc/product/mvp-flow.md) before changing screens, navigation, household constraints, persisted state, inventory behavior, recommendations, or backend integration.
+- Treat the product-flow document as canonical for product intent, interaction states, persistence boundaries, and user-visible invariants. Update it when those behaviors change.
+- Keep backend contracts behind typed client boundaries when API integration begins.
+- Preserve semantic structure, labels, keyboard focus, sufficient contrast, non-color status cues, and reduced-motion behavior.
 - Validate both compact mobile and desktop layouts when changing a screen.
-- Prefer plain-language actions and explain why a meal is suggested.
 
 ## Commands
 
@@ -31,7 +19,7 @@ npm run build
 
 ## Definition of done
 
-Changes must keep the primary Today → Choose → Cook → Confirm → Today loop runnable; update synchronized product documentation when states or data change; and pass test, typecheck, lint, and build. For meaningful UI changes, inspect the app at desktop and mobile widths.
+Changes must keep the primary product loop runnable, update the canonical product documentation when behavior changes, and pass test, typecheck, lint, and build. For meaningful UI changes, inspect the app at desktop and mobile widths.
 
 ## Delivery policy
 
