@@ -1,12 +1,26 @@
-# Cyber Kitchen documentation index
+---
+domain: Designs
+status: Active
+entry_points:
+  - src/App.tsx
+dependencies:
+  - product/mvp-flow.md
+---
 
-## Product and interaction
+# Cyber Kitchen Web documentation
 
-- [`../docs/mvp-user-flow-and-screen-map.md`](../docs/mvp-user-flow-and-screen-map.md) — canonical MVP scope, user flow, screen map, state transitions, persistence, and implemented data model.
+This index is the canonical entry point for product and implementation documentation for the web client. Read the MVP product flow before changing navigation, household constraints, persisted state, or inventory updates.
 
-## Repository operation
+## Documentation map
 
-- [`../README.md`](../README.md) — setup, quality commands, and demo script.
-- [`../AGENT.md`](../AGENT.md) — architecture conventions, decision roles, definition of done, and delivery boundaries.
+| Document | Purpose |
+|----------|---------|
+| [MVP product flow](product/mvp-flow.md) | Defines product intent, interaction states, persistence behavior, and user-visible invariants. |
+| [Repository guide](../AGENT.md) | Defines active implementation, accessibility, and delivery instructions. |
+| [README](../README.md) | Summarizes the product and local development commands. |
 
-When implementation changes navigation, state transitions, persisted entities, household constraints, or inventory adjustment behavior, update the MVP document in the same change.
+## Reading chains
+
+- **Change a product screen or transition:** [MVP product flow](product/mvp-flow.md) → `src/App.tsx` → relevant component in `src/components`
+- **Change persisted state or inventory behavior:** [MVP product flow](product/mvp-flow.md) → `src/types.ts` → `src/lib/store.ts`
+- **Change recommendation fixtures:** [MVP product flow](product/mvp-flow.md) → `src/data/mockData.ts`
