@@ -1,12 +1,13 @@
-# Cyber Kitchen repository guide
+# Cyber Kitchen Web repository guide
 
 ## Purpose and roles
 
-Cyber Kitchen is a responsive household meal decision and cooking prototype. Alisa leads product and UX direction; Yuliang leads technical direction; Artura implements, tests, and documents.
+Cyber Kitchen Web is the responsive browser client for the household meal decision and cooking product. Alisa leads product and UX direction; Yuliang leads technical direction; Artura implements, tests, and documents.
 
 ## Architecture
 
-- React + TypeScript + Vite single-page app; no router or backend in this MVP.
+- React + TypeScript + Vite single-page app; no router or backend API calls in this MVP.
+- Keep backend contracts behind typed client boundaries when API integration begins; the backend lives in `arturo-and-artura/cyber-kitchen`.
 - `App.tsx` owns the view state and persisted demo state.
 - Screen components live in `src/components`; fixtures in `src/data`; deterministic state helpers in `src/lib`.
 - Keep recommendation explanations explicit. Do not imply that the current recommendations use a live AI service.

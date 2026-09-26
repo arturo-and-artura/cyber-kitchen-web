@@ -1,6 +1,6 @@
-# Cyber Kitchen
+# Cyber Kitchen Web
 
-A polished, UX-first prototype for a shared household meal-planning loop. It turns visible household constraints and a mocked inventory into three explainable dinner recommendations, guides cooking, collects feedback, and deterministically updates inventory.
+The web client for Cyber Kitchen: a polished, UX-first prototype for a shared household meal-planning loop. It turns visible household constraints and a mocked inventory into three explainable dinner recommendations, guides cooking, collects feedback, and deterministically updates inventory.
 
 > This MVP is entirely local: recommendations and data are mocked, there are no API calls, and demo state is persisted in `localStorage`.
 
