@@ -1,5 +1,20 @@
 export type View = 'today' | 'choose' | 'cook' | 'confirm' | 'inventory' | 'history'
 
+export type Rating = 'loved' | 'okay' | 'not-for-us'
+
+export type HouseholdMember = {
+  id: string
+  name: string
+  initials: string
+}
+
+export type Household = {
+  name: string
+  members: HouseholdMember[]
+  constraints: string[]
+  goals: string[]
+}
+
 export type InventoryItem = {
   id: string
   name: string
@@ -37,12 +52,19 @@ export type HistoryEntry = {
   mealName: string
   emoji: string
   cookedAt: string
-  rating: 'loved' | 'okay' | 'not-for-us'
+  rating: Rating
   note: string
 }
 
 export type AppState = {
+  household: Household
   inventory: InventoryItem[]
+  meals: Meal[]
   history: HistoryEntry[]
   selectedMealId: string | null
+}
+
+export type MealConfirmation = {
+  rating: Rating
+  note: string
 }

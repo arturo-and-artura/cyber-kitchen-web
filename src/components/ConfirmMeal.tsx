@@ -1,12 +1,11 @@
 import { Check, Heart, Meh, RotateCcw, Sparkles, ThumbsDown } from 'lucide-react'
 import { useState } from 'react'
-import type { AppState, Meal } from '../types'
+import type { AppState, Meal, Rating } from '../types'
 import { formatAmount, inventoryAfterMeal } from '../lib/store'
 
-type Rating = 'loved' | 'okay' | 'not-for-us'
-type Props = { meal: Meal; state: AppState; onConfirm: (rating: Rating, note: string) => void; onBack: () => void }
+type Props = { meal: Meal; state: AppState; onConfirm: (rating: Rating, note: string) => void; onBack: () => void; isConfirming: boolean; error?: string }
 
-export function ConfirmMeal({ meal, state, onConfirm, onBack }: Props) {
+export function ConfirmMeal({ meal, state, onConfirm, onBack, isConfirming, error }: Props) {
   const [rating, setRating] = useState<Rating>('loved')
   const [note, setNote] = useState('')
   const after = inventoryAfterMeal(state, meal)
@@ -29,7 +28,8 @@ export function ConfirmMeal({ meal, state, onConfirm, onBack }: Props) {
           })}</div>
         </section>
       </div>
-      <div className="confirm-actions"><button className="secondary-button" onClick={onBack}>Back to recipe</button><button className="primary-button large" onClick={() => onConfirm(rating, note)}><Check size={18} /> Confirm meal & update inventory</button></div>
+      {error && <p className="request-error" role="alert">{error}</p>}
+      <div className="confirm-actions"><button className="secondary-button" onClick={onBack} disabled={isConfirming}>Back to recipe</button><button className="primary-button large" onClick={() => onConfirm(rating, note)} disabled={isConfirming}><Check size={18} /> {isConfirming ? 'Updating inventory…' : 'Confirm meal & update inventory'}</button></div>
     </div>
   )
 }
