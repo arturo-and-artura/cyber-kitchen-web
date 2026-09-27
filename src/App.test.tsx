@@ -30,7 +30,7 @@ function confirmedResult(note: string): MealConfirmationResult {
 }
 
 async function reachConfirmation(user: ReturnType<typeof userEvent.setup>) {
-  await screen.findByRole('heading', { name: /good morning/i })
+  await screen.findByRole('heading', { name: /good (morning|afternoon|evening)/i })
   await user.click(screen.getByRole('button', { name: /choose tonight’s meal/i }))
   await user.click(screen.getAllByRole('button', { name: /cook this meal/i })[0])
   for (let index = 0; index < 4; index += 1) await user.click(screen.getByRole('button', { name: /next step/i }))
@@ -101,7 +101,7 @@ describe('Cyber Kitchen API flow', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not reach cyber kitchen/i)
     await user.click(screen.getByRole('button', { name: /try again/i }))
-    expect(await screen.findByRole('heading', { name: /good morning/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: /good (morning|afternoon|evening)/i })).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(8)
   })
 
@@ -131,5 +131,53 @@ describe('Cyber Kitchen API flow', () => {
     await user.click(screen.getByRole('button', { name: /confirm meal & update inventory/i }))
     await waitFor(() => expect(screen.getByText('Dinner is done!')).toBeInTheDocument())
     expect(confirmationAttempts).toBe(2)
+  })
+
+  it('preserves the ingredient checklist and recipe step across navigation', async () => {
+    vi.stubGlobal('fetch', vi.fn((input: string | URL | Request) => Promise.resolve(readResourceResponse(String(input)))))
+    const user = userEvent.setup()
+
+    render(<App />)
+    await screen.findByRole('heading', { name: /good (morning|afternoon|evening)/i })
+    await user.click(screen.getByRole('button', { name: /choose tonight’s meal/i }))
+    await user.click(screen.getAllByRole('button', { name: /cook this meal/i })[0])
+    await user.click(screen.getByRole('checkbox', { name: /salmon fillets/i }))
+    await user.click(screen.getByRole('button', { name: /next step/i }))
+    await user.click(screen.getByRole('button', { name: /next step/i }))
+
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' })
+    await user.click(within(nav).getByRole('button', { name: 'Inventory' }))
+    await user.click(within(nav).getByRole('button', { name: 'Today' }))
+
+    expect(screen.getByRole('heading', { name: meals[0].name })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /resume cooking/i }))
+    expect(screen.getByRole('checkbox', { name: /salmon fillets/i })).toBeChecked()
+    expect(screen.getByText('3 of 5')).toBeInTheDocument()
+  })
+
+  it('preserves confirmation feedback across navigation and clears the active task after success', async () => {
+    const result = confirmedResult('Keep this note.')
+    vi.stubGlobal('fetch', vi.fn((input: string | URL | Request) => {
+      const path = String(input)
+      return Promise.resolve(path.endsWith('/confirm') ? jsonResponse(result) : readResourceResponse(path))
+    }))
+    const user = userEvent.setup()
+
+    render(<App />)
+    await reachConfirmation(user)
+    await user.click(screen.getByRole('radio', { name: /it was okay/i }))
+    await user.type(screen.getByPlaceholderText(/everyone loved/i), 'Keep this note.')
+
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' })
+    await user.click(within(nav).getByRole('button', { name: 'History' }))
+    await user.click(within(nav).getByRole('button', { name: 'Today' }))
+    await user.click(screen.getByRole('button', { name: /review and confirm/i }))
+
+    expect(screen.getByRole('radio', { name: /it was okay/i })).toBeChecked()
+    expect(screen.getByPlaceholderText(/everyone loved/i)).toHaveValue('Keep this note.')
+    await user.click(screen.getByRole('button', { name: /confirm meal & update inventory/i }))
+
+    expect(await screen.findByText('Dinner is done!')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /resume cooking|review and confirm/i })).not.toBeInTheDocument()
   })
 })

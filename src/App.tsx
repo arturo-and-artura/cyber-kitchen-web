@@ -9,6 +9,8 @@ import { Today } from './components/Today'
 import { confirmMeal, getMealState } from './lib/api'
 import type { Meal, MealState, Rating, View } from './types'
 
+type ActiveStage = 'cook' | 'confirm'
+
 function withValidSelection(state: MealState): MealState {
   return state.selectedMealId && !state.meals.some((meal) => meal.id === state.selectedMealId)
     ? { ...state, selectedMealId: null }
@@ -27,6 +29,11 @@ export default function App() {
   const [confirmationError, setConfirmationError] = useState<string>()
   const [isConfirming, setIsConfirming] = useState(false)
   const [latestMeal, setLatestMeal] = useState<string>()
+  const [activeStage, setActiveStage] = useState<ActiveStage>()
+  const [checkedIngredients, setCheckedIngredients] = useState<string[]>([])
+  const [cookingStep, setCookingStep] = useState(0)
+  const [rating, setRating] = useState<Rating>('loved')
+  const [note, setNote] = useState('')
 
   useEffect(() => {
     const controller = new AbortController()
@@ -67,13 +74,24 @@ export default function App() {
   }
 
   const selectMeal = (meal: Meal) => {
+    if (state.selectedMealId === meal.id && activeStage) {
+      setView(activeStage)
+      window.scrollTo(0, 0)
+      return
+    }
+
     setState((current) => current ? { ...current, selectedMealId: meal.id } : current)
+    setActiveStage('cook')
+    setCheckedIngredients([])
+    setCookingStep(0)
+    setRating('loved')
+    setNote('')
     setConfirmationError(undefined)
     setView('cook')
     window.scrollTo(0, 0)
   }
 
-  const confirm = async (rating: Rating, note: string) => {
+  const confirm = async () => {
     if (!selectedMeal || isConfirming) return
 
     setIsConfirming(true)
@@ -84,6 +102,11 @@ export default function App() {
         ? withValidSelection({ ...current, ...confirmationResult })
         : current)
       setLatestMeal(selectedMeal.name)
+      setActiveStage(undefined)
+      setCheckedIngredients([])
+      setCookingStep(0)
+      setRating('loved')
+      setNote('')
       setView('today')
       window.scrollTo(0, 0)
     } catch (error) {
@@ -93,13 +116,19 @@ export default function App() {
     }
   }
 
+  const resumeMeal = () => {
+    if (!selectedMeal || !activeStage) return
+    setView(activeStage)
+    window.scrollTo(0, 0)
+  }
+
   let content
-  if (view === 'choose') content = <ChooseMeal meals={state.meals} onBack={() => setView('today')} onSelect={selectMeal} />
-  else if (view === 'cook' && selectedMeal) content = <CookMeal meal={selectedMeal} inventory={state.inventory} onBack={() => setView('choose')} onFinish={() => setView('confirm')} />
-  else if (view === 'confirm' && selectedMeal) content = <ConfirmMeal meal={selectedMeal} state={state} onBack={() => setView('cook')} onConfirm={confirm} isConfirming={isConfirming} error={confirmationError} />
+  if (view === 'choose') content = <ChooseMeal household={state.household} meals={state.meals} activeMealId={selectedMeal?.id} onBack={() => setView('today')} onSelect={selectMeal} />
+  else if (view === 'cook' && selectedMeal) content = <CookMeal meal={selectedMeal} inventory={state.inventory} servingCount={state.household.members.length} checked={checkedIngredients} step={cookingStep} onToggleIngredient={(id) => setCheckedIngredients((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onStepChange={setCookingStep} onBack={() => setView('choose')} onFinish={() => { setActiveStage('confirm'); setView('confirm') }} />
+  else if (view === 'confirm' && selectedMeal) content = <ConfirmMeal meal={selectedMeal} state={state} rating={rating} note={note} onRatingChange={setRating} onNoteChange={setNote} onBack={() => { setActiveStage('cook'); setView('cook') }} onConfirm={confirm} isConfirming={isConfirming} error={confirmationError} />
   else if (view === 'inventory') content = <Inventory inventory={state.inventory} />
   else if (view === 'history') content = <History history={state.history} />
-  else content = <Today household={state.household} inventory={state.inventory} recommendationCount={state.meals.length} cookedTonight={latestMeal} onChoose={() => setView('choose')} />
+  else content = <Today household={state.household} inventory={state.inventory} recommendationCount={state.meals.length} cookedTonight={latestMeal} activeMeal={selectedMeal ?? undefined} activeStage={activeStage} onResume={resumeMeal} onChoose={() => setView('choose')} />
 
   return <Shell household={state.household} view={view} setView={setView}>{content}</Shell>
 }
