@@ -4,15 +4,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 import { inventoryAfterMeal } from './lib/store'
 import { initialState, meals } from './test-fixtures'
-import type { AppState } from './types'
+import type { MealConfirmationResult } from './types'
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 }
 
-function confirmedState(note: string): AppState {
+function readResourceResponse(path: string) {
+  if (path === '/api/v1/household') return jsonResponse(initialState.household)
+  if (path === '/api/v1/inventory') return jsonResponse({ inventory: initialState.inventory })
+  if (path === '/api/v1/meals') return jsonResponse({ meals: initialState.meals, selectedMealId: initialState.selectedMealId })
+  if (path === '/api/v1/history') return jsonResponse({ history: initialState.history })
+  throw new Error(`Unexpected request: ${path}`)
+}
+
+function confirmedResult(note: string): MealConfirmationResult {
   return {
-    ...initialState,
     inventory: inventoryAfterMeal(initialState, meals[0]),
     selectedMealId: null,
     history: [
@@ -33,10 +40,12 @@ async function reachConfirmation(user: ReturnType<typeof userEvent.setup>) {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('Cyber Kitchen API flow', () => {
-  it('loads recommendations and confirms a meal through the API', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse(initialState))
-      .mockResolvedValueOnce(jsonResponse(confirmedState('Bright and easy.')))
+  it('assembles resource reads and adopts only returned confirmation fields', async () => {
+    const result = confirmedResult('Bright and easy.')
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const path = String(input)
+      return Promise.resolve(path.endsWith('/confirm') ? jsonResponse(result) : readResourceResponse(path))
+    })
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
 
@@ -44,7 +53,10 @@ describe('Cyber Kitchen API flow', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent(/getting your kitchen ready/i)
     expect(await screen.findByText('✓ Peanut-free')).toBeInTheDocument()
-    expect(fetchMock).toHaveBeenNthCalledWith(1, '/api/v1/state', expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    expect(fetchMock).toHaveBeenCalledTimes(4)
+    for (const path of ['/api/v1/household', '/api/v1/inventory', '/api/v1/meals', '/api/v1/history']) {
+      expect(fetchMock).toHaveBeenCalledWith(path, expect.objectContaining({ signal: expect.any(AbortSignal) }))
+    }
 
     await reachConfirmation(user)
     expect(screen.getByRole('heading', { name: /nice work/i })).toBeInTheDocument()
@@ -57,10 +69,14 @@ describe('Cyber Kitchen API flow', () => {
 
     expect(await screen.findByText('Dinner is done!')).toBeInTheDocument()
     expect(screen.getByText(/miso-glazed salmon bowls was added/i)).toBeInTheDocument()
-    expect(fetchMock).toHaveBeenNthCalledWith(2, '/api/v1/meals/miso-salmon/confirm', expect.objectContaining({
+    expect(screen.getByText('✓ Peanut-free')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/meals/miso-salmon/confirm', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ rating: 'loved', note: 'Bright and easy.' }),
     }))
+
+    await user.click(screen.getByRole('button', { name: /choose tonight’s meal/i }))
+    expect(screen.getByRole('heading', { name: meals[0].name })).toBeInTheDocument()
 
     const nav = screen.getByRole('navigation', { name: 'Main navigation' })
     await user.click(within(nav).getByRole('button', { name: 'Inventory' }))
@@ -69,10 +85,15 @@ describe('Cyber Kitchen API flow', () => {
     expect(screen.getByText('“Bright and easy.”')).toBeInTheDocument()
   })
 
-  it('shows an initial-load error and retries the state request', async () => {
-    const fetchMock = vi.fn()
-      .mockRejectedValueOnce(new TypeError('offline'))
-      .mockResolvedValueOnce(jsonResponse(initialState))
+  it('shows a per-resource initial-load error and retries all resource reads', async () => {
+    let householdAttempts = 0
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const path = String(input)
+      if (path === '/api/v1/household' && householdAttempts++ === 0) {
+        return Promise.reject(new TypeError('offline'))
+      }
+      return Promise.resolve(readResourceResponse(path))
+    })
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
 
@@ -81,14 +102,19 @@ describe('Cyber Kitchen API flow', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not reach cyber kitchen/i)
     await user.click(screen.getByRole('button', { name: /try again/i }))
     expect(await screen.findByRole('heading', { name: /good morning/i })).toBeInTheDocument()
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock).toHaveBeenCalledTimes(8)
   })
 
   it('keeps the confirmation preview intact when confirmation fails and allows retry', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce(jsonResponse(initialState))
-      .mockResolvedValueOnce(jsonResponse({ detail: 'Temporary kitchen outage' }, 503))
-      .mockResolvedValueOnce(jsonResponse(confirmedState('Try again note.')))
+    let confirmationAttempts = 0
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const path = String(input)
+      if (!path.endsWith('/confirm')) return Promise.resolve(readResourceResponse(path))
+      confirmationAttempts += 1
+      return Promise.resolve(confirmationAttempts === 1
+        ? jsonResponse({ detail: 'Temporary kitchen outage' }, 503)
+        : jsonResponse(confirmedResult('Try again note.')))
+    })
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
 
@@ -104,6 +130,6 @@ describe('Cyber Kitchen API flow', () => {
 
     await user.click(screen.getByRole('button', { name: /confirm meal & update inventory/i }))
     await waitFor(() => expect(screen.getByText('Dinner is done!')).toBeInTheDocument())
-    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(confirmationAttempts).toBe(2)
   })
 })

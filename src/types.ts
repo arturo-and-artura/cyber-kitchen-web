@@ -56,7 +56,7 @@ export type HistoryEntry = {
   note: string
 }
 
-export type AppState = {
+export type MealState = {
   household: Household
   inventory: InventoryItem[]
   meals: Meal[]
@@ -64,7 +64,14 @@ export type AppState = {
   selectedMealId: string | null
 }
 
+export type AppState = MealState
+
 export type MealConfirmation = {
   rating: Rating
   note: string
 }
+
+export type MealConfirmationResult = Pick<
+  MealState,
+  'inventory' | 'history' | 'selectedMealId'
+>

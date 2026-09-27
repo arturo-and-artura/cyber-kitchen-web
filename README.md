@@ -1,6 +1,6 @@
 # Cyber Kitchen Web
 
-Cyber Kitchen Web helps a household choose a meal, cook it, record feedback, and keep inventory synchronized. The client loads household state and recommendations from the Cyber Kitchen API and sends confirmed meal feedback back to that API.
+Cyber Kitchen Web helps a household choose a meal, cook it, record feedback, and keep inventory synchronized. The client concurrently loads household, inventory, meal, and history resources from the Cyber Kitchen API and sends confirmed meal feedback back to that API.
 
 ## Run
 
@@ -28,7 +28,7 @@ npm run build
 
 ## Product flow
 
-The primary interaction is **Today → Choose → Cook → Confirm → Today**. Inventory and History remain available from the main navigation. Meal confirmation previews inventory changes locally, then uses the API response as the authoritative committed state.
+The primary interaction is **Today → Choose → Cook → Confirm → Today**. Inventory and History remain available from the main navigation. Meal confirmation previews inventory changes locally, then adopts the API response’s inventory, history, and selected-meal fields while preserving the loaded household and meal recommendations.
 
 ## Documentation
 

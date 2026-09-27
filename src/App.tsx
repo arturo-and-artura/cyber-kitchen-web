@@ -7,9 +7,9 @@ import { Inventory } from './components/Inventory'
 import { Shell } from './components/Shell'
 import { Today } from './components/Today'
 import { confirmMeal, getMealState } from './lib/api'
-import type { AppState, Meal, Rating, View } from './types'
+import type { Meal, MealState, Rating, View } from './types'
 
-function withValidSelection(state: AppState): AppState {
+function withValidSelection(state: MealState): MealState {
   return state.selectedMealId && !state.meals.some((meal) => meal.id === state.selectedMealId)
     ? { ...state, selectedMealId: null }
     : state
@@ -21,7 +21,7 @@ function errorMessage(error: unknown) {
 
 export default function App() {
   const [view, setView] = useState<View>('today')
-  const [state, setState] = useState<AppState | null>(null)
+  const [state, setState] = useState<MealState | null>(null)
   const [loadError, setLoadError] = useState<string>()
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [confirmationError, setConfirmationError] = useState<string>()
@@ -79,8 +79,10 @@ export default function App() {
     setIsConfirming(true)
     setConfirmationError(undefined)
     try {
-      const nextState = withValidSelection(await confirmMeal(selectedMeal.id, { rating, note }))
-      setState(nextState)
+      const confirmationResult = await confirmMeal(selectedMeal.id, { rating, note })
+      setState((current) => current
+        ? withValidSelection({ ...current, ...confirmationResult })
+        : current)
       setLatestMeal(selectedMeal.name)
       setView('today')
       window.scrollTo(0, 0)
