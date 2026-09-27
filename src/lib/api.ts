@@ -1,4 +1,12 @@
-import type { AppState, MealConfirmation } from '../types'
+import type {
+  HistoryEntry,
+  Household,
+  InventoryItem,
+  Meal,
+  MealConfirmation,
+  MealConfirmationResult,
+  MealState,
+} from '../types'
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
 const apiBaseUrl = configuredBaseUrl.replace(/\/$/, '')
@@ -13,7 +21,7 @@ export class ApiError extends Error {
   }
 }
 
-async function requestState(path: string, init?: RequestInit): Promise<AppState> {
+async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response
 
   try {
@@ -41,18 +49,35 @@ async function requestState(path: string, init?: RequestInit): Promise<AppState>
   }
 
   try {
-    return (await response.json()) as AppState
+    return (await response.json()) as T
   } catch {
     throw new ApiError('Cyber Kitchen returned an unreadable response.', response.status)
   }
 }
 
-export function getMealState(signal?: AbortSignal) {
-  return requestState('/api/v1/state', { signal })
+type InventoryResponse = { inventory: InventoryItem[] }
+type MealsResponse = { meals: Meal[]; selectedMealId: string | null }
+type HistoryResponse = { history: HistoryEntry[] }
+
+export async function getMealState(signal?: AbortSignal): Promise<MealState> {
+  const [household, inventoryResponse, mealsResponse, historyResponse] = await Promise.all([
+    requestJson<Household>('/api/v1/household', { signal }),
+    requestJson<InventoryResponse>('/api/v1/inventory', { signal }),
+    requestJson<MealsResponse>('/api/v1/meals', { signal }),
+    requestJson<HistoryResponse>('/api/v1/history', { signal }),
+  ])
+
+  return {
+    household,
+    inventory: inventoryResponse.inventory,
+    meals: mealsResponse.meals,
+    history: historyResponse.history,
+    selectedMealId: mealsResponse.selectedMealId,
+  }
 }
 
 export function confirmMeal(mealId: string, confirmation: MealConfirmation) {
-  return requestState(`/api/v1/meals/${encodeURIComponent(mealId)}/confirm`, {
+  return requestJson<MealConfirmationResult>(`/api/v1/meals/${encodeURIComponent(mealId)}/confirm`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(confirmation),
