@@ -1,4 +1,4 @@
-import type { AppState, Meal } from '../types'
+import type { AppState, Meal } from './types'
 
 export const meals: Meal[] = [
   {
@@ -78,6 +78,17 @@ export const meals: Meal[] = [
 ]
 
 export const initialState: AppState = {
+  household: {
+    name: 'The Lee household',
+    members: [
+      { id: 'yl', name: 'Y. Lee', initials: 'YL' },
+      { id: 'al', name: 'A. Lee', initials: 'AL' },
+      { id: 'ml', name: 'M. Lee', initials: 'ML' },
+    ],
+    constraints: ['Peanut-free', 'Dairy-light'],
+    goals: ['High protein', 'Less food waste'],
+  },
+  meals,
   selectedMealId: null,
   inventory: [
     { id: 'salmon', name: 'Salmon fillets', amount: 2, unit: 'fillets', category: 'Protein', lowAt: 1 },

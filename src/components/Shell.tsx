@@ -1,16 +1,17 @@
 import { CalendarDays, ChefHat, Clock3, PackageOpen, Sparkles } from 'lucide-react'
 import type { ReactNode } from 'react'
-import type { View } from '../types'
+import type { Household, View } from '../types'
 
-type Props = { view: View; setView: (view: View) => void; children: ReactNode }
+type Props = { household: Household; view: View; setView: (view: View) => void; children: ReactNode }
 
-export function Shell({ view, setView, children }: Props) {
+export function Shell({ household, view, setView, children }: Props) {
   const activeView = view === 'choose' || view === 'cook' || view === 'confirm' ? 'today' : view
   const nav = [
     { id: 'today' as const, label: 'Today', icon: CalendarDays },
     { id: 'inventory' as const, label: 'Inventory', icon: PackageOpen },
     { id: 'history' as const, label: 'History', icon: Clock3 },
   ]
+  const profileItems = [...household.constraints, ...household.goals]
 
   return (
     <div className="app-shell">
@@ -28,9 +29,9 @@ export function Shell({ view, setView, children }: Props) {
         </nav>
         <div className="household-card">
           <span className="eyebrow"><Sparkles size={13} /> Household profile</span>
-          <strong>The Lee household</strong>
-          <div className="avatar-row" aria-label="Household members"><span>YL</span><span>AL</span><span>ML</span></div>
-          <p><b>Peanut-free</b> · Dairy-light<br />High protein · Less food waste</p>
+          <strong>{household.name}</strong>
+          <div className="avatar-row" aria-label="Household members">{household.members.map((member) => <span key={member.id} title={member.name}>{member.initials}</span>)}</div>
+          <p>{profileItems.join(' · ')}</p>
         </div>
       </aside>
       <main id="main-content">{children}</main>

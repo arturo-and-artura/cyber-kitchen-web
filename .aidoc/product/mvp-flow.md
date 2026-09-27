@@ -3,15 +3,15 @@ domain: Designs
 status: Active
 entry_points:
   - src/App.tsx
+  - src/lib/api.ts
   - src/lib/store.ts
-  - src/data/mockData.ts
 dependencies:
   - ../INDEX.md
 ---
 
 # MVP product flow
 
-Cyber Kitchen helps a household decide what to cook, follow the recipe, record feedback, and update inventory without hiding consequential changes. The current client demonstrates this loop with local fixtures and browser persistence; recommendations do not use a backend or live AI service.
+Cyber Kitchen helps a household decide what to cook, follow the recipe, record feedback, and update inventory without hiding consequential changes. The web client loads household state and recommendations from the Cyber Kitchen API, then treats the API response after confirmation as the authoritative committed state.
 
 ## Related Docs
 
@@ -40,22 +40,23 @@ The main navigation exposes Today, Inventory, and History throughout the experie
 
 ## Product Invariants
 
-- Recommendation rationale MUST remain visible and distinguish the fixture-based experience from a live AI service.
+- Recommendation rationale MUST remain visible at meal-selection decision points.
 - Household allergy constraints MUST remain visible at meal-selection decision points.
 - Meal confirmation MUST preview inventory changes before committing them.
 - Preview and commit MUST use the same deterministic inventory calculation.
 - Inventory quantities MUST NOT fall below zero.
 - Returning from confirmation to the recipe MUST preserve the selected meal and avoid inventory or history mutations.
-- Confirming a meal MUST update inventory, prepend a history entry, clear the selected meal, and return to Today.
-- Invalid persisted meal selections MUST fall back to Today safely.
+- Confirming a meal MUST send the selected meal, rating, and note to the API; only a successful response may update inventory and history, clear the selected meal, and return to Today.
+- A failed confirmation MUST preserve the selected meal, feedback, preview, inventory, and history so the person can retry.
+- Invalid selected meal identifiers returned by the API MUST fall back to Today safely.
 
 ## Persistence and Data Boundaries
 
-`App` owns the current view and persisted `AppState`. View position, ingredient checklist progress, and current cooking step are intentionally transient; inventory, meal history, and selected meal identity persist under the versioned key exported by `src/lib/store.ts`.
+`App` owns transient view position, ingredient checklist progress, and the current cooking step. `getMealState` in `src/lib/api.ts` loads the household, inventory, recommendations, history, and selected meal identity from `GET /api/v1/state`. The API is the persistence boundary; the client does not mirror domain state into browser storage.
 
-`loadState` restores persisted state and falls back to `initialState` when stored JSON cannot be read. `inventoryAfterMeal` calculates both the confirmation preview and the committed inventory so the displayed outcome cannot drift from the saved outcome.
+Meal selection remains local during the cooking flow. `confirmMeal` sends `{ rating, note }` to `POST /api/v1/meals/{mealId}/confirm`, and the returned full state replaces the client state only after a successful response. `VITE_API_BASE_URL` configures a separate API origin and defaults to same-origin requests.
 
-Current recommendations and initial household data are fixtures in `src/data/mockData.ts`. No product data leaves the browser, and the client has no authentication, telemetry, backend request, or external recommendation integration.
+`inventoryAfterMeal` in `src/lib/store.ts` deterministically calculates the confirmation preview and clamps quantities at zero. The backend independently commits the operation and returns authoritative inventory and history, so the client never presents a failed request as committed. Initial-load and confirmation failures remain visible and retryable.
 
 ## Interaction and Accessibility Constraints
 
@@ -67,9 +68,9 @@ Current recommendations and initial household data are fixtures in `src/data/moc
 
 | Concern | Primary implementation |
 |---------|------------------------|
-| View transitions and confirmation commit | `App` in `src/App.tsx` |
-| Persisted state and inventory calculation | `loadState` and `inventoryAfterMeal` in `src/lib/store.ts` |
-| Domain-shaped client types | `src/types.ts` |
-| Recommendation and initial-state fixtures | `src/data/mockData.ts` |
+| View transitions and API state adoption | `App` in `src/App.tsx` |
+| Backend requests and base URL configuration | `getMealState` and `confirmMeal` in `src/lib/api.ts` |
+| Confirmation inventory preview | `inventoryAfterMeal` in `src/lib/store.ts` |
+| Domain and API boundary types | `src/types.ts` |
 | Navigation and task grouping | `Shell` in `src/components/Shell.tsx` |
 | Confirmation preview and feedback | `ConfirmMeal` in `src/components/ConfirmMeal.tsx` |

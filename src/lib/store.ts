@@ -1,16 +1,4 @@
-import { initialState } from '../data/mockData'
 import type { AppState, Meal } from '../types'
-
-export const STORAGE_KEY = 'cyber-kitchen-demo-v1'
-
-export function loadState(): AppState {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY)
-    return saved ? (JSON.parse(saved) as AppState) : initialState
-  } catch {
-    return initialState
-  }
-}
 
 export function inventoryAfterMeal(state: AppState, meal: Meal) {
   return state.inventory.map((item) => {

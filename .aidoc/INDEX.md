@@ -9,7 +9,7 @@ dependencies:
 
 # Cyber Kitchen Web documentation
 
-This index is the canonical entry point for product and implementation documentation for the web client. Read the MVP product flow before changing navigation, household constraints, persisted state, or inventory updates.
+This index is the canonical entry point for product and implementation documentation for the web client. Read the MVP product flow before changing navigation, household constraints, API state, confirmation behavior, or inventory updates.
 
 ## Documentation map
 
@@ -22,5 +22,5 @@ This index is the canonical entry point for product and implementation documenta
 ## Reading chains
 
 - **Change a product screen or transition:** [MVP product flow](product/mvp-flow.md) → `src/App.tsx` → relevant component in `src/components`
-- **Change persisted state or inventory behavior:** [MVP product flow](product/mvp-flow.md) → `src/types.ts` → `src/lib/store.ts`
-- **Change recommendation fixtures:** [MVP product flow](product/mvp-flow.md) → `src/data/mockData.ts`
+- **Change API state or confirmation behavior:** [MVP product flow](product/mvp-flow.md) → `src/types.ts` → `src/lib/api.ts` → `src/App.tsx`
+- **Change inventory preview behavior:** [MVP product flow](product/mvp-flow.md) → `src/types.ts` → `src/lib/store.ts`
