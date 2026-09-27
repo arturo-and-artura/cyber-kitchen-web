@@ -52,7 +52,9 @@ The main navigation exposes Today, Inventory, and History throughout the experie
 
 ## Persistence and Data Boundaries
 
-`App` owns transient view position, ingredient checklist progress, and the current cooking step. `getMealState` in `src/lib/api.ts` concurrently requests `GET /api/v1/household`, `GET /api/v1/inventory`, `GET /api/v1/meals`, and `GET /api/v1/history`, then assembles their typed payloads into `MealState`. There is no aggregate-state fallback. The initial view remains loading until all four resources succeed. A failure from any resource keeps the error visible and retries the complete read set. The API is the persistence boundary; the client does not mirror domain state into browser storage.
+`App` owns transient view position, active cooking stage, ingredient checklist progress, current cooking step, and confirmation feedback. These values survive navigation to Today, Inventory, or History during the browser session, and Today offers an explicit resume action. Selecting a different meal or successfully confirming the active meal clears the prior task state. This interruption safety is intentionally session-only; the client does not mirror domain state into browser storage.
+
+`getMealState` in `src/lib/api.ts` concurrently requests `GET /api/v1/household`, `GET /api/v1/inventory`, `GET /api/v1/meals`, and `GET /api/v1/history`, then assembles their typed payloads into `MealState`. There is no aggregate-state fallback. The initial view remains loading until all four resources succeed. A failure from any resource keeps the error visible and retries the complete read set. The API is the persistence boundary.
 
 Meal selection remains local during the cooking flow. `confirmMeal` sends `{ rating, note }` to `POST /api/v1/meals/{mealId}/confirm`. After a successful response, `App` preserves the existing household and meal recommendations while replacing inventory, history, and selected meal identity with the returned authoritative fields. `VITE_API_BASE_URL` configures a separate API origin and defaults to same-origin requests.
 
@@ -60,7 +62,7 @@ Meal selection remains local during the cooking flow. `confirmMeal` sends `{ rat
 
 ## Interaction and Accessibility Constraints
 
-`Shell` provides the persistent desktop navigation and compact mobile navigation. Screen components preserve semantic headings, labels, keyboard focus, non-color status cues, and reduced-motion behavior.
+`Shell` provides the persistent desktop navigation and compact mobile navigation. Both navigation variants expose the active page semantically. Screen components preserve semantic headings, labels, keyboard focus, non-color status cues, and reduced-motion behavior. Today derives its date and time-of-day greeting from the browser rather than presenting fixture copy.
 
 `ConfirmMeal` requires one of the supported ratings, accepts an optional bounded note, and exposes the before-and-after quantity for each used ingredient. `Inventory` provides case-insensitive search, category filters, low-stock labels, and an explicit empty state. `History` presents newest entries first and summarizes positive feedback.
 

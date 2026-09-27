@@ -22,7 +22,7 @@ export function Shell({ household, view, setView, children }: Props) {
         </button>
         <nav>
           {nav.map(({ id, label, icon: Icon }) => (
-            <button key={id} className={activeView === id ? 'nav-item active' : 'nav-item'} onClick={() => setView(id)}>
+            <button key={id} className={activeView === id ? 'nav-item active' : 'nav-item'} aria-current={activeView === id ? 'page' : undefined} onClick={() => setView(id)}>
               <Icon size={19} /> {label}
             </button>
           ))}
@@ -37,7 +37,7 @@ export function Shell({ household, view, setView, children }: Props) {
       <main id="main-content">{children}</main>
       <nav className="mobile-nav" aria-label="Main navigation">
         {nav.map(({ id, label, icon: Icon }) => (
-          <button key={id} className={activeView === id ? 'active' : ''} onClick={() => setView(id)}>
+          <button key={id} className={activeView === id ? 'active' : ''} aria-current={activeView === id ? 'page' : undefined} onClick={() => setView(id)}>
             <Icon size={20} /><span>{label}</span>
           </button>
         ))}

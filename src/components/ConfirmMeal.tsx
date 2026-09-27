@@ -1,13 +1,21 @@
 import { Check, Heart, Meh, RotateCcw, Sparkles, ThumbsDown } from 'lucide-react'
-import { useState } from 'react'
 import type { AppState, Meal, Rating } from '../types'
 import { formatAmount, inventoryAfterMeal } from '../lib/store'
 
-type Props = { meal: Meal; state: AppState; onConfirm: (rating: Rating, note: string) => void; onBack: () => void; isConfirming: boolean; error?: string }
+type Props = {
+  meal: Meal
+  state: AppState
+  rating: Rating
+  note: string
+  onRatingChange: (rating: Rating) => void
+  onNoteChange: (note: string) => void
+  onConfirm: () => void
+  onBack: () => void
+  isConfirming: boolean
+  error?: string
+}
 
-export function ConfirmMeal({ meal, state, onConfirm, onBack, isConfirming, error }: Props) {
-  const [rating, setRating] = useState<Rating>('loved')
-  const [note, setNote] = useState('')
+export function ConfirmMeal({ meal, state, rating, note, onRatingChange, onNoteChange, onConfirm, onBack, isConfirming, error }: Props) {
   const after = inventoryAfterMeal(state, meal)
   return (
     <div className="page confirm-page">
@@ -15,9 +23,9 @@ export function ConfirmMeal({ meal, state, onConfirm, onBack, isConfirming, erro
       <div className="confirm-layout">
         <section className="panel feedback-panel"><span className="eyebrow">QUICK FEEDBACK</span><h2>How was {meal.name}?</h2>
           <div className="rating-grid" role="radiogroup" aria-label="Meal rating">
-            {[{ id: 'loved', label: 'Loved it', Icon: Heart }, { id: 'okay', label: 'It was okay', Icon: Meh }, { id: 'not-for-us', label: 'Not for us', Icon: ThumbsDown }].map(({ id, label, Icon }) => <button role="radio" aria-checked={rating === id} key={id} className={rating === id ? 'selected' : ''} onClick={() => setRating(id as Rating)}><Icon size={23} /><span>{label}</span></button>)}
+            {[{ id: 'loved', label: 'Loved it', Icon: Heart }, { id: 'okay', label: 'It was okay', Icon: Meh }, { id: 'not-for-us', label: 'Not for us', Icon: ThumbsDown }].map(({ id, label, Icon }) => <button role="radio" aria-checked={rating === id} key={id} className={rating === id ? 'selected' : ''} onClick={() => onRatingChange(id as Rating)}><Icon size={23} /><span>{label}</span></button>)}
           </div>
-          <label className="note-field">Anything to remember for next time? <span>Optional</span><textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder="e.g. Everyone loved the extra cucumber…" maxLength={180} /></label>
+          <label className="note-field">Anything to remember for next time? <span>Optional</span><textarea value={note} onChange={(event) => onNoteChange(event.target.value)} placeholder="e.g. Everyone loved the extra cucumber…" maxLength={180} /></label>
         </section>
         <section className="panel adjustment-panel"><div className="panel-heading"><div><span className="eyebrow">INVENTORY PREVIEW</span><h2>What we’ll update</h2></div><span className="automatic"><RotateCcw size={13} /> Automatic</span></div>
           <p className="muted">Based on the recipe amounts. Nothing changes until you confirm.</p>
@@ -29,7 +37,7 @@ export function ConfirmMeal({ meal, state, onConfirm, onBack, isConfirming, erro
         </section>
       </div>
       {error && <p className="request-error" role="alert">{error}</p>}
-      <div className="confirm-actions"><button className="secondary-button" onClick={onBack} disabled={isConfirming}>Back to recipe</button><button className="primary-button large" onClick={() => onConfirm(rating, note)} disabled={isConfirming}><Check size={18} /> {isConfirming ? 'Updating inventory…' : 'Confirm meal & update inventory'}</button></div>
+      <div className="confirm-actions"><button className="secondary-button" onClick={onBack} disabled={isConfirming}>Back to recipe</button><button className="primary-button large" onClick={onConfirm} disabled={isConfirming}><Check size={18} /> {isConfirming ? 'Updating inventory…' : 'Confirm meal & update inventory'}</button></div>
     </div>
   )
 }
