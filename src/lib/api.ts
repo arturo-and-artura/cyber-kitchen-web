@@ -6,6 +6,7 @@ import type {
   MealConfirmation,
   MealConfirmationResult,
   MealState,
+  RecommendationResult,
 } from '../types'
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
@@ -82,4 +83,24 @@ export function confirmMeal(mealId: string, confirmation: MealConfirmation) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(confirmation),
   })
+}
+
+export function updateHousehold(profile: Pick<Household, 'constraints' | 'goals'>) {
+  return requestJson<Household>('/api/v1/household', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile),
+  })
+}
+
+export function putInventory(item: InventoryItem) {
+  return requestJson<InventoryResponse>(`/api/v1/inventory/${encodeURIComponent(item.id)}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item),
+  })
+}
+
+export function deleteInventory(id: string) {
+  return requestJson<InventoryResponse>(`/api/v1/inventory/${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export function generateRecommendations() {
+  return requestJson<RecommendationResult>('/api/v1/recommendations/generate', { method: 'POST' })
 }

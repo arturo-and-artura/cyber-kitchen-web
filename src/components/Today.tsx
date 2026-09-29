@@ -54,7 +54,7 @@ export function Today({ household, inventory, recommendationCount, cookedTonight
           <h2>What sounds good<br />for dinner?</h2>
           <p>We found {recommendationCount} {ideaLabel} based on what you have, what your household enjoys, and your goals.</p>
           <button className="primary-button inverted" onClick={onChoose}>Choose tonight’s meal <ArrowRight size={18} /></button>
-          <span className="helper"><Clock3 size={15} /> Demo recommendations are ready to cook</span>
+          <span className="helper"><Clock3 size={15} /> Kitchen recommendations are ready to cook</span>
         </div>
         <div className="hero-art" aria-hidden="true">
           <span className="plate"><UtensilsCrossed /></span><span className="floating tomato"><Sparkles /></span><span className="floating leaf"><Leaf /></span><span className="floating lemon"><Sparkles /></span>
