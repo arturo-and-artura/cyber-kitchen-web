@@ -1,14 +1,14 @@
 import { ArrowLeft, ArrowRight, Check, Clock3, PackageOpen, Sparkles } from 'lucide-react'
 import type { Household, Meal } from '../types'
 
-type Props = { household: Household; meals: Meal[]; activeMealId?: string; onBack: () => void; onSelect: (meal: Meal) => void }
+type Props = { household: Household; meals: Meal[]; activeMealId?: string; onBack: () => void; onSelect: (meal: Meal) => void; onRegenerate: () => void; isGenerating: boolean; generationSource?: 'model' | 'fallback'; error?: string }
 
-export function ChooseMeal({ household, meals, activeMealId, onBack, onSelect }: Props) {
+export function ChooseMeal({ household, meals, activeMealId, onBack, onSelect, onRegenerate, isGenerating, generationSource, error }: Props) {
   const matchLabel = meals.length === 1 ? 'ONE THOUGHTFUL MATCH' : `${meals.length} THOUGHTFUL MATCHES`
   return (
     <div className="page choose-page">
       <button className="back-button" onClick={onBack}><ArrowLeft size={17} /> Today</button>
-      <header className="choice-header"><span className="eyebrow"><Sparkles size={14} /> {matchLabel}</span><h1>Pick tonight’s dinner</h1><p>Every option respects your household profile. We’ve explained why each one made the list.</p></header>
+      <header className="choice-header"><span className="eyebrow"><Sparkles size={14} /> {matchLabel}</span><h1>Pick tonight’s dinner</h1><p>Every option respects your household profile. We’ve explained why each one made the list.</p><button className="secondary-button" onClick={onRegenerate} disabled={isGenerating}><Sparkles size={15} /> {isGenerating ? 'Thinking…' : 'Refresh ideas'}</button>{generationSource && <p className="agent-status" role="status">{generationSource === 'model' ? 'Fresh ideas from your kitchen agent.' : 'Reliable fallback ideas are shown while the model is unavailable.'}</p>}{error && <p className="form-error" role="alert">{error}</p>}</header>
       {meals.length ? (
         <div className="meal-grid">
           {meals.map((meal, index) => (

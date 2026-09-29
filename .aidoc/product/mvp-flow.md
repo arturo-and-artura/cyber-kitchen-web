@@ -11,7 +11,7 @@ dependencies:
 
 # MVP product flow
 
-Cyber Kitchen helps a household decide what to cook, follow the recipe, record feedback, and update inventory without hiding consequential changes. The web client assembles household state and recommendations from resource-oriented Cyber Kitchen API reads, then adopts the committed fields returned after confirmation.
+Cyber Kitchen is a focused household kitchen-assistance agent presented through a guided product flow. The web client keeps application context current, requests strictly validated recommendations, reports deterministic fallback use, and never hides consequential inventory or history changes.
 
 ## Related Docs
 
@@ -36,6 +36,8 @@ The primary flow is **Today → Choose → Cook → Confirm → Today**:
 4. **Confirm** collects a rating and optional note, previews every inventory adjustment, and commits only after confirmation.
 5. **Today** reports completion while Inventory and History reflect the committed result.
 
+**Inventory & profile** lets the household edit constraints, goals, and ingredients that form the next agent turn's application-owned context. **Refresh ideas** requests one stateless recommendation turn; the response replaces meal choices only after backend validation and identifies whether the model or deterministic fallback produced them.
+
 The main navigation exposes Today, Inventory, and History throughout the experience. The cooking states remain grouped under Today so navigation communicates that they belong to one task.
 
 ## Product Invariants
@@ -49,12 +51,17 @@ The main navigation exposes Today, Inventory, and History throughout the experie
 - Confirming a meal MUST send the selected meal, rating, and note to the API; only a successful response may update inventory and history, clear the selected meal, and return to Today.
 - A failed confirmation MUST preserve the selected meal, feedback, preview, inventory, and history so the person can retry.
 - Invalid selected meal identifiers returned by the API MUST fall back to Today safely.
+- Household and inventory edits MUST adopt only successful API responses.
+- Recommendation refresh MUST preserve current choices on failure and disclose deterministic fallback use.
+- The client MUST NOT expose model tools, persistent agent sessions, or direct mutation authority.
 
 ## Persistence and Data Boundaries
 
 `App` owns transient view position, active cooking stage, ingredient checklist progress, current cooking step, and confirmation feedback. These values survive navigation to Today, Inventory, or History during the browser session, and Today offers an explicit resume action. Selecting a different meal or successfully confirming the active meal clears the prior task state. This interruption safety is intentionally session-only; the client does not mirror domain state into browser storage.
 
 `getMealState` in `src/lib/api.ts` concurrently requests `GET /api/v1/household`, `GET /api/v1/inventory`, `GET /api/v1/meals`, and `GET /api/v1/history`, then assembles their typed payloads into `MealState`. There is no aggregate-state fallback. The initial view remains loading until all four resources succeed. A failure from any resource keeps the error visible and retries the complete read set. The API is the persistence boundary.
+
+Profile and inventory forms call `PUT /api/v1/household`, `PUT /api/v1/inventory/{id}`, and `DELETE /api/v1/inventory/{id}`. They adopt the returned resource only after success. `POST /api/v1/recommendations/generate` performs the focused agent turn; `App` replaces recommendations from its validated response, clears an obsolete active meal, and presents the returned `model` or `fallback` source.
 
 Meal selection remains local during the cooking flow. `confirmMeal` sends `{ rating, note }` to `POST /api/v1/meals/{mealId}/confirm`. After a successful response, `App` preserves the existing household and meal recommendations while replacing inventory, history, and selected meal identity with the returned authoritative fields. `VITE_API_BASE_URL` configures a separate API origin and defaults to same-origin requests.
 
@@ -71,7 +78,9 @@ Meal selection remains local during the cooking flow. `confirmMeal` sends `{ rat
 | Concern | Primary implementation |
 |---------|------------------------|
 | View transitions and API state adoption | `App` in `src/App.tsx` |
-| Backend requests and base URL configuration | `getMealState` and `confirmMeal` in `src/lib/api.ts` |
+| Backend requests and base URL configuration | resource, editing, recommendation, and confirmation functions in `src/lib/api.ts` |
+| Kitchen context editing | `Inventory` in `src/components/Inventory.tsx` |
+| Agent turn status and fallback disclosure | `ChooseMeal` in `src/components/ChooseMeal.tsx` |
 | Confirmation inventory preview | `inventoryAfterMeal` in `src/lib/store.ts` |
 | Assembled `MealState` and API boundary types | `src/types.ts` |
 | Navigation and task grouping | `Shell` in `src/components/Shell.tsx` |

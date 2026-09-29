@@ -6,8 +6,8 @@ import { History } from './components/History'
 import { Inventory } from './components/Inventory'
 import { Shell } from './components/Shell'
 import { Today } from './components/Today'
-import { confirmMeal, getMealState } from './lib/api'
-import type { Meal, MealState, Rating, View } from './types'
+import { confirmMeal, deleteInventory, generateRecommendations, getMealState, putInventory, updateHousehold } from './lib/api'
+import type { Household, InventoryItem, Meal, MealState, Rating, View } from './types'
 
 type ActiveStage = 'cook' | 'confirm'
 
@@ -34,6 +34,10 @@ export default function App() {
   const [cookingStep, setCookingStep] = useState(0)
   const [rating, setRating] = useState<Rating>('loved')
   const [note, setNote] = useState('')
+  const [editError, setEditError] = useState<string>()
+  const [isGenerating, setIsGenerating] = useState(false)
+  const [generationSource, setGenerationSource] = useState<'model' | 'fallback'>()
+  const [generationError, setGenerationError] = useState<string>()
 
   useEffect(() => {
     const controller = new AbortController()
@@ -116,6 +120,42 @@ export default function App() {
     }
   }
 
+  const saveHousehold = async (profile: Pick<Household, 'constraints' | 'goals'>) => {
+    setEditError(undefined)
+    try {
+      const household = await updateHousehold(profile)
+      setState((current) => current ? { ...current, household } : current)
+    } catch (error) { setEditError(errorMessage(error)); throw error }
+  }
+
+  const saveInventory = async (item: InventoryItem) => {
+    setEditError(undefined)
+    try {
+      const result = await putInventory(item)
+      setState((current) => current ? { ...current, inventory: result.inventory } : current)
+    } catch (error) { setEditError(errorMessage(error)); throw error }
+  }
+
+  const removeInventory = async (id: string) => {
+    setEditError(undefined)
+    try {
+      const result = await deleteInventory(id)
+      setState((current) => current ? { ...current, inventory: result.inventory } : current)
+    } catch (error) { setEditError(errorMessage(error)); throw error }
+  }
+
+  const regenerate = async () => {
+    if (isGenerating) return
+    setIsGenerating(true); setGenerationError(undefined)
+    try {
+      const result = await generateRecommendations()
+      setState((current) => current ? { ...current, meals: result.meals, selectedMealId: null } : current)
+      setGenerationSource(result.source)
+      setActiveStage(undefined)
+    } catch (error) { setGenerationError(errorMessage(error)) }
+    finally { setIsGenerating(false) }
+  }
+
   const resumeMeal = () => {
     if (!selectedMeal || !activeStage) return
     setView(activeStage)
@@ -123,10 +163,10 @@ export default function App() {
   }
 
   let content
-  if (view === 'choose') content = <ChooseMeal household={state.household} meals={state.meals} activeMealId={selectedMeal?.id} onBack={() => setView('today')} onSelect={selectMeal} />
+  if (view === 'choose') content = <ChooseMeal household={state.household} meals={state.meals} activeMealId={selectedMeal?.id} onBack={() => setView('today')} onSelect={selectMeal} onRegenerate={regenerate} isGenerating={isGenerating} generationSource={generationSource} error={generationError} />
   else if (view === 'cook' && selectedMeal) content = <CookMeal meal={selectedMeal} inventory={state.inventory} servingCount={state.household.members.length} checked={checkedIngredients} step={cookingStep} onToggleIngredient={(id) => setCheckedIngredients((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])} onStepChange={setCookingStep} onBack={() => setView('choose')} onFinish={() => { setActiveStage('confirm'); setView('confirm') }} />
   else if (view === 'confirm' && selectedMeal) content = <ConfirmMeal meal={selectedMeal} state={state} rating={rating} note={note} onRatingChange={setRating} onNoteChange={setNote} onBack={() => { setActiveStage('cook'); setView('cook') }} onConfirm={confirm} isConfirming={isConfirming} error={confirmationError} />
-  else if (view === 'inventory') content = <Inventory inventory={state.inventory} />
+  else if (view === 'inventory') content = <Inventory household={state.household} inventory={state.inventory} onSaveHousehold={saveHousehold} onSaveItem={saveInventory} onDeleteItem={removeInventory} error={editError} />
   else if (view === 'history') content = <History history={state.history} />
   else content = <Today household={state.household} inventory={state.inventory} recommendationCount={state.meals.length} cookedTonight={latestMeal} activeMeal={selectedMeal ?? undefined} activeStage={activeStage} onResume={resumeMeal} onChoose={() => setView('choose')} />
 

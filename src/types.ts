@@ -75,3 +75,8 @@ export type MealConfirmationResult = Pick<
   MealState,
   'inventory' | 'history' | 'selectedMealId'
 >
+
+export type RecommendationResult = {
+  meals: Meal[]
+  source: 'model' | 'fallback'
+}

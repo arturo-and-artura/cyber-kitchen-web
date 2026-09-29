@@ -155,6 +155,37 @@ describe('Cyber Kitchen API flow', () => {
     expect(screen.getByText('3 of 5')).toBeInTheDocument()
   })
 
+  it('edits kitchen context and refreshes recommendations through the focused agent API', async () => {
+    const added = { id: 'tomato', name: 'Tomato', amount: 4, unit: '', category: 'Produce' as const, lowAt: 1 }
+    const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit) => {
+      const path = String(input)
+      if (path === '/api/v1/household' && init?.method === 'PUT') return Promise.resolve(jsonResponse({ ...initialState.household, goals: ['Use produce first'] }))
+      if (path === '/api/v1/inventory/tomato' && init?.method === 'PUT') return Promise.resolve(jsonResponse({ inventory: [...initialState.inventory, added] }))
+      if (path === '/api/v1/recommendations/generate') return Promise.resolve(jsonResponse({ meals: initialState.meals, source: 'fallback' }))
+      return Promise.resolve(readResourceResponse(path))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<App />)
+
+    await screen.findByRole('heading', { name: /good (morning|afternoon|evening)/i })
+    const nav = screen.getByRole('navigation', { name: 'Main navigation' })
+    await user.click(within(nav).getByRole('button', { name: 'Inventory' }))
+    const goals = screen.getByLabelText('Kitchen goals')
+    await user.clear(goals); await user.type(goals, 'Use produce first')
+    await user.click(screen.getByRole('button', { name: 'Save profile' }))
+    await user.type(screen.getByLabelText('Name'), 'Tomato')
+    await user.clear(screen.getByLabelText('Amount')); await user.type(screen.getByLabelText('Amount'), '4')
+    await user.click(screen.getByRole('button', { name: 'Add' }))
+    expect(await screen.findByRole('heading', { name: 'Tomato' })).toBeInTheDocument()
+
+    await user.click(within(nav).getByRole('button', { name: 'Today' }))
+    await user.click(screen.getByRole('button', { name: /choose tonight’s meal/i }))
+    await user.click(screen.getByRole('button', { name: 'Refresh ideas' }))
+    expect(await screen.findByRole('status')).toHaveTextContent(/reliable fallback ideas/i)
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/recommendations/generate', expect.objectContaining({ method: 'POST' }))
+  })
+
   it('preserves confirmation feedback across navigation and clears the active task after success', async () => {
     const result = confirmedResult('Keep this note.')
     vi.stubGlobal('fetch', vi.fn((input: string | URL | Request) => {
