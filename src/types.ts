@@ -6,6 +6,8 @@ export type HouseholdMember = {
   id: string
   name: string
   initials: string
+  heightCm?: number
+  notes?: string[]
 }
 
 export type Household = {
@@ -13,6 +15,7 @@ export type Household = {
   members: HouseholdMember[]
   constraints: string[]
   goals: string[]
+  preferences: string[]
 }
 
 export type InventoryItem = {
@@ -20,8 +23,13 @@ export type InventoryItem = {
   name: string
   amount: number
   unit: string
-  category: 'Produce' | 'Protein' | 'Pantry' | 'Dairy'
+  category: 'Produce' | 'Fruit' | 'Protein' | 'Prepared' | 'Dairy' | 'Pantry' | 'Condiment'
   lowAt: number
+  count?: number
+  countUnit?: string
+  storage?: string
+  recordedOn?: string
+  notes?: string
 }
 
 export type MealIngredient = {

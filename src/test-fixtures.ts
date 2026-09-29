@@ -79,21 +79,22 @@ export const meals: Meal[] = [
 
 export const initialState: AppState = {
   household: {
-    name: 'The Lee household',
+    name: 'Shared household',
     members: [
-      { id: 'yl', name: 'Y. Lee', initials: 'YL' },
-      { id: 'al', name: 'A. Lee', initials: 'AL' },
-      { id: 'ml', name: 'M. Lee', initials: 'ML' },
+      { id: 'member-one', name: 'Member one', initials: 'M1', heightCm: 170, notes: ['Prefers smaller portions'] },
+      { id: 'member-two', name: 'Member two', initials: 'M2' },
+      { id: 'member-three', name: 'Member three', initials: 'M3' },
     ],
-    constraints: ['Peanut-free', 'Dairy-light'],
+    constraints: ['Keep ingredients separate'],
     goals: ['High protein', 'Less food waste'],
+    preferences: ['Quick weekday meals'],
   },
   meals,
   selectedMealId: null,
   inventory: [
     { id: 'salmon', name: 'Salmon fillets', amount: 2, unit: 'fillets', category: 'Protein', lowAt: 1 },
     { id: 'chicken', name: 'Chicken breast', amount: 450, unit: 'g', category: 'Protein', lowAt: 300 },
-    { id: 'rice', name: 'Brown rice', amount: 3, unit: 'cups', category: 'Pantry', lowAt: 1 },
+    { id: 'rice', name: 'Brown rice', amount: 3, unit: 'cups', category: 'Pantry', lowAt: 1, count: 1, countUnit: 'bag', storage: 'Pantry', recordedOn: '2026-09-20', notes: 'Opened' },
     { id: 'pasta', name: 'Whole-wheat pasta', amount: 500, unit: 'g', category: 'Pantry', lowAt: 200 },
     { id: 'chickpeas', name: 'Chickpeas', amount: 2, unit: 'cans', category: 'Pantry', lowAt: 1 },
     { id: 'miso', name: 'White miso', amount: 8, unit: 'tbsp', category: 'Pantry', lowAt: 2 },

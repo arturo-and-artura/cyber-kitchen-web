@@ -85,7 +85,9 @@ export function confirmMeal(mealId: string, confirmation: MealConfirmation) {
   })
 }
 
-export function updateHousehold(profile: Pick<Household, 'constraints' | 'goals'>) {
+export type HouseholdUpdate = Pick<Household, 'members' | 'constraints' | 'goals' | 'preferences'>
+
+export function updateHousehold(profile: HouseholdUpdate) {
   return requestJson<Household>('/api/v1/household', {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(profile),
   })
