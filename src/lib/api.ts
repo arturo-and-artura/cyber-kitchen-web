@@ -7,6 +7,7 @@ import type {
   MealConfirmationResult,
   MealState,
   RecommendationResult,
+  Locale,
 } from '../types'
 
 const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim() ?? ''
@@ -16,6 +17,7 @@ export class ApiError extends Error {
   constructor(
     message: string,
     public readonly status?: number,
+    public readonly code?: string,
   ) {
     super(message)
     this.name = 'ApiError'
@@ -35,24 +37,26 @@ async function requestJson<T>(path: string, init?: RequestInit): Promise<T> {
     })
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error
-    throw new ApiError('Could not reach Cyber Kitchen. Check your connection and try again.')
+    throw new ApiError('network error', undefined, 'client_network')
   }
 
   if (!response.ok) {
     let detail: string | undefined
+    let code: string | undefined
     try {
-      const body = (await response.json()) as { detail?: string; message?: string; error?: string }
+      const body = (await response.json()) as { detail?: string; message?: string; error?: string; code?: string }
       detail = body.detail ?? body.message ?? body.error
+      code = body.code
     } catch {
       // The status-specific fallback below is enough when the response has no JSON body.
     }
-    throw new ApiError(detail ?? `Cyber Kitchen returned an error (${response.status}).`, response.status)
+    throw new ApiError(detail ?? `HTTP ${response.status}`, response.status, code ?? 'client_http')
   }
 
   try {
     return (await response.json()) as T
   } catch {
-    throw new ApiError('Cyber Kitchen returned an unreadable response.', response.status)
+    throw new ApiError('unreadable response', response.status, 'client_unreadable')
   }
 }
 
@@ -103,6 +107,6 @@ export function deleteInventory(id: string) {
   return requestJson<InventoryResponse>(`/api/v1/inventory/${encodeURIComponent(id)}`, { method: 'DELETE' })
 }
 
-export function generateRecommendations() {
-  return requestJson<RecommendationResult>('/api/v1/recommendations/generate', { method: 'POST' })
+export function generateRecommendations(locale: Locale) {
+  return requestJson<RecommendationResult>('/api/v1/recommendations/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locale }) })
 }

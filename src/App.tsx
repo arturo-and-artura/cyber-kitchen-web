@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useI18n } from './i18n'
+import { ApiError } from './lib/api'
 import { ChooseMeal } from './components/ChooseMeal'
 import { ConfirmMeal } from './components/ConfirmMeal'
 import { CookMeal } from './components/CookMeal'
@@ -18,11 +20,18 @@ function withValidSelection(state: MealState): MealState {
     : state
 }
 
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
-}
-
 export default function App() {
+  const { locale, t } = useI18n()
+  const errorMessage = useCallback((error: unknown) => {
+    if (error instanceof ApiError) {
+      if (error.code === 'ai_recommendations_unavailable') return t('error.aiUnavailable')
+      if (error.code === 'ai_recommendation_failed') return t('error.aiFailed')
+      if (error.code === 'client_network') return t('error.network')
+      if (error.code === 'client_unreadable') return t('error.unreadable')
+      if (error.code === 'client_http') return t('error.http', { status: error.status ?? '?' })
+    }
+    return error instanceof Error ? error.message : t('error.generic')
+  }, [t])
   const [view, setView] = useState<View>('today')
   const [state, setState] = useState<MealState | null>(null)
   const [loadError, setLoadError] = useState<string>()
@@ -51,7 +60,7 @@ export default function App() {
       })
 
     return () => controller.abort()
-  }, [loadAttempt])
+  }, [errorMessage, loadAttempt])
 
   const selectedMeal = useMemo(
     () => state?.meals.find((meal) => meal.id === state.selectedMealId) ?? null,
@@ -63,15 +72,15 @@ export default function App() {
       <main className="app-status" aria-live="polite">
         {loadError ? (
           <div className="status-card" role="alert">
-            <h1>We couldn’t load your kitchen.</h1>
+            <h1>{t('status.loadTitle')}</h1>
             <p>{loadError}</p>
-            <button className="primary-button" onClick={() => { setLoadError(undefined); setLoadAttempt((attempt) => attempt + 1) }}>Try again</button>
+            <button className="primary-button" onClick={() => { setLoadError(undefined); setLoadAttempt((attempt) => attempt + 1) }}>{t('status.retry')}</button>
           </div>
         ) : (
           <div className="status-card" role="status">
             <span className="loading-mark" aria-hidden="true" />
-            <h1>Getting your kitchen ready…</h1>
-            <p>Loading your household, inventory, and meal ideas.</p>
+            <h1>{t('status.loading')}</h1>
+            <p>{t('status.loadingBody')}</p>
           </div>
         )}
       </main>
@@ -149,7 +158,7 @@ export default function App() {
     if (isGenerating) return
     setIsGenerating(true); setGenerationError(undefined)
     try {
-      const result = await generateRecommendations()
+      const result = await generateRecommendations(locale)
       setState((current) => current ? { ...current, meals: result.meals, selectedMealId: null } : current)
       setGenerationSource(result.source)
       setActiveStage(undefined)

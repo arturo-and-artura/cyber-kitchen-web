@@ -1,48 +1,10 @@
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, ChefHat, Clock3, UtensilsCrossed } from 'lucide-react'
+import { useI18n } from '../i18n'
 import type { InventoryItem, Meal } from '../types'
 import { formatAmount } from '../lib/store'
 
-type Props = {
-  meal: Meal
-  inventory: InventoryItem[]
-  servingCount: number
-  checked: string[]
-  step: number
-  onToggleIngredient: (id: string) => void
-  onStepChange: (step: number) => void
-  onBack: () => void
-  onFinish: () => void
-}
-
+type Props = { meal: Meal; inventory: InventoryItem[]; servingCount: number; checked: string[]; step: number; onToggleIngredient: (id: string) => void; onStepChange: (step: number) => void; onBack: () => void; onFinish: () => void }
 export function CookMeal({ meal, inventory, servingCount, checked, step, onToggleIngredient, onStepChange, onBack, onFinish }: Props) {
-  return (
-    <div className="page cook-page">
-      <button className="back-button" onClick={onBack}><ArrowLeft size={17} /> Meal choices</button>
-      <header className="cook-header"><div className={`mini-art ${meal.accent}`}><UtensilsCrossed /></div><div><span className="eyebrow">COOKING MODE</span><h1>{meal.name}</h1><p><Clock3 size={15} /> {meal.minutes} minutes · {meal.difficulty} · Serves {servingCount}</p></div></header>
-      <div className="cook-layout">
-        <section className="panel ingredient-panel"><div className="panel-heading"><div><span className="eyebrow">GET READY</span><h2>Ingredients</h2></div><span>{checked.length}/{meal.ingredients.length} ready</span></div>
-          <div className="ingredient-list">
-            {meal.ingredients.map((ingredient) => {
-              const item = inventory.find((inventoryItem) => inventoryItem.id === ingredient.inventoryId)
-              const available = item && item.amount >= ingredient.amount
-              return <label key={ingredient.inventoryId} className={checked.includes(ingredient.inventoryId) ? 'checked' : ''}>
-                <input type="checkbox" checked={checked.includes(ingredient.inventoryId)} onChange={() => onToggleIngredient(ingredient.inventoryId)} />
-                <span className="custom-check"><Check size={14} /></span><span><strong>{ingredient.name}</strong><small>{formatAmount(ingredient.amount, ingredient.unit)}</small></span><b className={available ? 'available' : 'missing'}>{available ? 'On hand' : 'Need'}</b>
-              </label>
-            })}
-          </div>
-        </section>
-        <section className="panel steps-panel"><div className="panel-heading"><div><span className="eyebrow">STEP BY STEP</span><h2>Let’s cook</h2></div><span>{step + 1} of {meal.steps.length}</span></div>
-          <div className="progress-track" aria-label={`Recipe progress: step ${step + 1} of ${meal.steps.length}`}><span style={{ width: `${((step + 1) / meal.steps.length) * 100}%` }} /></div>
-          <div className="current-step"><span>{step + 1}</span><p>{meal.steps[step]}</p></div>
-          <ol className="step-list">{meal.steps.map((text, index) => <li key={text} className={index < step ? 'done' : index === step ? 'current' : ''}><span>{index < step ? <Check size={14} /> : index + 1}</span><p>{text}</p></li>)}</ol>
-          <div className="step-actions">
-            <button className="secondary-button" disabled={step === 0} onClick={() => onStepChange(step - 1)}>Previous</button>
-            {step < meal.steps.length - 1 ? <button className="primary-button" onClick={() => onStepChange(step + 1)}>Next step <ArrowRight size={17} /></button> : <button className="primary-button" onClick={onFinish}><ChefHat size={17} /> Finish cooking</button>}
-          </div>
-          {step === meal.steps.length - 1 && <p className="finish-hint"><CheckCircle2 size={16} /> You made it — serve when ready!</p>}
-        </section>
-      </div>
-    </div>
-  )
+  const { t } = useI18n()
+  return <div className="page cook-page"><button className="back-button" onClick={onBack}><ArrowLeft size={17} /> {t('cook.back')}</button><header className="cook-header"><div className={`mini-art ${meal.accent}`}><UtensilsCrossed /></div><div><span className="eyebrow">{t('cook.mode')}</span><h1>{meal.name}</h1><p><Clock3 size={15} /> {t('cook.summary', { minutes: meal.minutes, difficulty: t(`difficulty.${meal.difficulty}`), count: servingCount })}</p></div></header><div className="cook-layout"><section className="panel ingredient-panel"><div className="panel-heading"><div><span className="eyebrow">{t('cook.readyLabel')}</span><h2>{t('cook.ingredients')}</h2></div><span>{t('cook.readyCount', { checked: checked.length, total: meal.ingredients.length })}</span></div><div className="ingredient-list">{meal.ingredients.map((ingredient) => { const item = inventory.find((entry) => entry.id === ingredient.inventoryId); const available = item && item.amount >= ingredient.amount; return <label key={ingredient.inventoryId} className={checked.includes(ingredient.inventoryId) ? 'checked' : ''}><input type="checkbox" checked={checked.includes(ingredient.inventoryId)} onChange={() => onToggleIngredient(ingredient.inventoryId)} /><span className="custom-check"><Check size={14} /></span><span><strong>{ingredient.name}</strong><small>{formatAmount(ingredient.amount, ingredient.unit)}</small></span><b className={available ? 'available' : 'missing'}>{available ? t('cook.onHand') : t('cook.need')}</b></label> })}</div></section><section className="panel steps-panel"><div className="panel-heading"><div><span className="eyebrow">{t('cook.stepsLabel')}</span><h2>{t('cook.title')}</h2></div><span>{t('cook.stepOf', { step: step + 1, total: meal.steps.length })}</span></div><div className="progress-track" aria-label={t('cook.progress', { step: step + 1, total: meal.steps.length })}><span style={{ width: `${((step + 1) / meal.steps.length) * 100}%` }} /></div><div className="current-step"><span>{step + 1}</span><p>{meal.steps[step]}</p></div><ol className="step-list">{meal.steps.map((text, index) => <li key={text} className={index < step ? 'done' : index === step ? 'current' : ''}><span>{index < step ? <Check size={14} /> : index + 1}</span><p>{text}</p></li>)}</ol><div className="step-actions"><button className="secondary-button" disabled={step === 0} onClick={() => onStepChange(step - 1)}>{t('cook.previous')}</button>{step < meal.steps.length - 1 ? <button className="primary-button" onClick={() => onStepChange(step + 1)}>{t('cook.next')} <ArrowRight size={17} /></button> : <button className="primary-button" onClick={onFinish}><ChefHat size={17} /> {t('cook.finish')}</button>}</div>{step === meal.steps.length - 1 && <p className="finish-hint"><CheckCircle2 size={16} /> {t('cook.finished')}</p>}</section></div></div>
 }

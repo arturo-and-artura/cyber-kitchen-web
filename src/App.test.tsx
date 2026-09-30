@@ -2,6 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { I18nProvider } from './i18n'
 import { inventoryAfterMeal } from './lib/store'
 import { initialState, meals } from './test-fixtures'
 import type { MealConfirmationResult } from './types'
@@ -37,7 +38,7 @@ async function reachConfirmation(user: ReturnType<typeof userEvent.setup>) {
   await user.click(screen.getByRole('button', { name: /finish cooking/i }))
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); localStorage.clear() })
 
 describe('Cyber Kitchen API flow', () => {
   it('assembles resource reads and adopts only returned confirmation fields', async () => {
@@ -49,7 +50,7 @@ describe('Cyber Kitchen API flow', () => {
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
 
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     expect(screen.getByRole('status')).toHaveTextContent(/getting your kitchen ready/i)
     expect(await screen.findByText('✓ Keep ingredients separate')).toBeInTheDocument()
@@ -97,7 +98,7 @@ describe('Cyber Kitchen API flow', () => {
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
 
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     expect(await screen.findByRole('alert')).toHaveTextContent(/could not reach cyber kitchen/i)
     await user.click(screen.getByRole('button', { name: /try again/i }))
@@ -118,12 +119,12 @@ describe('Cyber Kitchen API flow', () => {
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
 
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
     await reachConfirmation(user)
     await user.type(screen.getByPlaceholderText(/everyone loved/i), 'Try again note.')
     await user.click(screen.getByRole('button', { name: /confirm meal & update inventory/i }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Temporary kitchen outage')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Cyber Kitchen returned an error (503).')
     expect(screen.getByText(/nothing changes until you confirm/i)).toBeInTheDocument()
     expect(screen.getByText('2 fillets')).toBeInTheDocument()
     expect(screen.getByText('0 fillets')).toBeInTheDocument()
@@ -137,7 +138,7 @@ describe('Cyber Kitchen API flow', () => {
     vi.stubGlobal('fetch', vi.fn((input: string | URL | Request) => Promise.resolve(readResourceResponse(String(input)))))
     const user = userEvent.setup()
 
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
     await screen.findByRole('heading', { name: /good (morning|afternoon|evening)/i })
     await user.click(screen.getByRole('button', { name: /choose tonight’s meal/i }))
     await user.click(screen.getAllByRole('button', { name: /cook this meal/i })[0])
@@ -166,7 +167,7 @@ describe('Cyber Kitchen API flow', () => {
     })
     vi.stubGlobal('fetch', fetchMock)
     const user = userEvent.setup()
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
 
     await screen.findByRole('heading', { name: /good (morning|afternoon|evening)/i })
     const nav = screen.getByRole('navigation', { name: 'Main navigation' })
@@ -208,7 +209,7 @@ describe('Cyber Kitchen API flow', () => {
     await user.click(screen.getByRole('button', { name: /choose tonight’s meal/i }))
     await user.click(screen.getByRole('button', { name: 'Refresh ideas' }))
     expect(await screen.findByRole('status')).toHaveTextContent(/reliable fallback ideas/i)
-    expect(fetchMock).toHaveBeenCalledWith('/api/v1/recommendations/generate', expect.objectContaining({ method: 'POST' }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/recommendations/generate', expect.objectContaining({ method: 'POST', body: JSON.stringify({ locale: 'en' }) }))
   })
 
   it('preserves confirmation feedback across navigation and clears the active task after success', async () => {
@@ -219,7 +220,7 @@ describe('Cyber Kitchen API flow', () => {
     }))
     const user = userEvent.setup()
 
-    render(<App />)
+    render(<I18nProvider><App /></I18nProvider>)
     await reachConfirmation(user)
     await user.click(screen.getByRole('radio', { name: /it was okay/i }))
     await user.type(screen.getByPlaceholderText(/everyone loved/i), 'Keep this note.')
@@ -236,4 +237,30 @@ describe('Cyber Kitchen API flow', () => {
     expect(await screen.findByText('Dinner is done!')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /resume cooking|review and confirm/i })).not.toBeInTheDocument()
   })
+
+  it('runs the complete core flow in Simplified Chinese and requests Chinese recommendations', async () => {
+    localStorage.setItem('cyber-kitchen-locale', 'zh-CN')
+    const result = confirmedResult('下次多加一点黄瓜。')
+    const fetchMock = vi.fn((input: string | URL | Request) => {
+      const path = String(input)
+      if (path === '/api/v1/recommendations/generate') return Promise.resolve(jsonResponse({ meals: initialState.meals.map((meal) => ({ ...meal, locale: 'zh-CN' })), source: 'model' }))
+      return Promise.resolve(path.endsWith('/confirm') ? jsonResponse(result) : readResourceResponse(path))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<I18nProvider><App /></I18nProvider>)
+
+    expect(await screen.findByRole('heading', { name: /好，厨房伙伴们/ })).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: /选择今晚的餐点/ }))
+    await user.click(screen.getByRole('button', { name: '刷新建议' }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/recommendations/generate', expect.objectContaining({ body: JSON.stringify({ locale: 'zh-CN' }) }))
+    await user.click(screen.getAllByRole('button', { name: /烹饪这道菜/ })[0])
+    for (let index = 0; index < 4; index += 1) await user.click(screen.getByRole('button', { name: /下一步/ }))
+    await user.click(screen.getByRole('button', { name: /完成烹饪/ }))
+    await user.type(screen.getByPlaceholderText(/大家都喜欢/), '下次多加一点黄瓜。')
+    await user.click(screen.getByRole('button', { name: /确认餐点并更新库存/ }))
+    expect(await screen.findByText('晚餐完成！')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/meals/miso-salmon/confirm', expect.objectContaining({ body: JSON.stringify({ rating: 'loved', note: '下次多加一点黄瓜。' }) }))
+  })
+
 })
