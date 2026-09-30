@@ -52,7 +52,7 @@ describe('Cyber Kitchen API flow', () => {
     render(<App />)
 
     expect(screen.getByRole('status')).toHaveTextContent(/getting your kitchen ready/i)
-    expect(await screen.findByText('✓ Peanut-free')).toBeInTheDocument()
+    expect(await screen.findByText('✓ Keep ingredients separate')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledTimes(4)
     for (const path of ['/api/v1/household', '/api/v1/inventory', '/api/v1/meals', '/api/v1/history']) {
       expect(fetchMock).toHaveBeenCalledWith(path, expect.objectContaining({ signal: expect.any(AbortSignal) }))
@@ -69,7 +69,7 @@ describe('Cyber Kitchen API flow', () => {
 
     expect(await screen.findByText('Dinner is done!')).toBeInTheDocument()
     expect(screen.getByText(/miso-glazed salmon bowls was added/i)).toBeInTheDocument()
-    expect(screen.getByText('✓ Peanut-free')).toBeInTheDocument()
+    expect(screen.getByText('✓ Keep ingredients separate')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/meals/miso-salmon/confirm', expect.objectContaining({
       method: 'POST',
       body: JSON.stringify({ rating: 'loved', note: 'Bright and easy.' }),
@@ -156,10 +156,10 @@ describe('Cyber Kitchen API flow', () => {
   })
 
   it('edits kitchen context and refreshes recommendations through the focused agent API', async () => {
-    const added = { id: 'tomato', name: 'Tomato', amount: 4, unit: '', category: 'Produce' as const, lowAt: 1 }
+    const added = { id: 'tomato', name: 'Tomato', amount: 4, unit: '', category: 'Produce' as const, lowAt: 1, count: 2, countUnit: 'packs', storage: 'Counter', recordedOn: '2026-09-29', notes: 'Use soon' }
     const fetchMock = vi.fn((input: string | URL | Request, init?: RequestInit) => {
       const path = String(input)
-      if (path === '/api/v1/household' && init?.method === 'PUT') return Promise.resolve(jsonResponse({ ...initialState.household, goals: ['Use produce first'] }))
+      if (path === '/api/v1/household' && init?.method === 'PUT') return Promise.resolve(jsonResponse({ ...initialState.household, goals: ['Use produce first'], preferences: ['Quick meals', 'Seasonal ingredients'] }))
       if (path === '/api/v1/inventory/tomato' && init?.method === 'PUT') return Promise.resolve(jsonResponse({ inventory: [...initialState.inventory, added] }))
       if (path === '/api/v1/recommendations/generate') return Promise.resolve(jsonResponse({ meals: initialState.meals, source: 'fallback' }))
       return Promise.resolve(readResourceResponse(path))
@@ -173,11 +173,36 @@ describe('Cyber Kitchen API flow', () => {
     await user.click(within(nav).getByRole('button', { name: 'Inventory' }))
     const goals = screen.getByLabelText('Kitchen goals')
     await user.clear(goals); await user.type(goals, 'Use produce first')
+    const preferences = screen.getByLabelText('Food preferences')
+    await user.clear(preferences); await user.type(preferences, 'Quick meals{enter}Seasonal ingredients')
+    const height = screen.getByLabelText('Height in centimetres for Member one')
+    await user.clear(height); await user.type(height, '172')
+    const memberNotes = screen.getByLabelText('Notes for Member one')
+    await user.clear(memberNotes); await user.type(memberNotes, 'Prefers shared dishes{enter}Enjoys mild flavours')
     await user.click(screen.getByRole('button', { name: 'Save profile' }))
     await user.type(screen.getByLabelText('Name'), 'Tomato')
     await user.clear(screen.getByLabelText('Amount')); await user.type(screen.getByLabelText('Amount'), '4')
+    await user.click(screen.getByText('Optional details'))
+    await user.type(screen.getByLabelText('Count'), '2')
+    await user.type(screen.getByLabelText('Count unit'), 'packs')
+    await user.type(screen.getByLabelText('Storage'), 'Counter')
+    await user.type(screen.getByLabelText('Recorded on'), '2026-09-29')
+    await user.type(screen.getByLabelText('Notes', { selector: '.item-notes textarea' }), 'Use soon')
     await user.click(screen.getByRole('button', { name: 'Add' }))
-    expect(await screen.findByRole('heading', { name: 'Tomato' })).toBeInTheDocument()
+    const tomatoCard = (await screen.findByRole('heading', { name: 'Tomato' })).closest('article')
+    expect(tomatoCard).toHaveTextContent('2 packs')
+    expect(tomatoCard).toHaveTextContent('Counter')
+    expect(tomatoCard).toHaveTextContent('Recorded 2026-09-29')
+    expect(tomatoCard).toHaveTextContent('Use soon')
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/household', expect.objectContaining({
+      method: 'PUT',
+      body: expect.stringContaining('"preferences":["Quick meals","Seasonal ingredients"]'),
+    }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/inventory/tomato', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify(added),
+    }))
 
     await user.click(within(nav).getByRole('button', { name: 'Today' }))
     await user.click(screen.getByRole('button', { name: /choose tonight’s meal/i }))

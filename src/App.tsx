@@ -7,7 +7,8 @@ import { Inventory } from './components/Inventory'
 import { Shell } from './components/Shell'
 import { Today } from './components/Today'
 import { confirmMeal, deleteInventory, generateRecommendations, getMealState, putInventory, updateHousehold } from './lib/api'
-import type { Household, InventoryItem, Meal, MealState, Rating, View } from './types'
+import type { HouseholdUpdate } from './lib/api'
+import type { InventoryItem, Meal, MealState, Rating, View } from './types'
 
 type ActiveStage = 'cook' | 'confirm'
 
@@ -120,7 +121,7 @@ export default function App() {
     }
   }
 
-  const saveHousehold = async (profile: Pick<Household, 'constraints' | 'goals'>) => {
+  const saveHousehold = async (profile: HouseholdUpdate) => {
     setEditError(undefined)
     try {
       const household = await updateHousehold(profile)

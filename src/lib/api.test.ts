@@ -87,4 +87,24 @@ describe('meal state API client', () => {
 
     await expect(confirmMeal('missing', { rating: 'okay', note: '' })).rejects.toThrow('meal not found')
   })
+
+  it('updates every editable household field without sending the read-only name', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(initialState.household))
+    vi.stubGlobal('fetch', fetchMock)
+    const { updateHousehold } = await import('./api')
+    const update = {
+      members: initialState.household.members,
+      constraints: initialState.household.constraints,
+      goals: initialState.household.goals,
+      preferences: initialState.household.preferences,
+    }
+
+    await updateHousehold(update)
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/v1/household', expect.objectContaining({
+      method: 'PUT',
+      body: JSON.stringify(update),
+    }))
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body as string)).not.toHaveProperty('name')
+  })
 })
