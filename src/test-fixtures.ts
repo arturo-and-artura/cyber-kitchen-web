@@ -2,6 +2,7 @@ import type { AppState, Meal } from './types'
 
 export const meals: Meal[] = [
   {
+    locale: 'en',
     id: 'miso-salmon',
     name: 'Miso-glazed salmon bowls',
     description: 'Caramelized salmon, sesame greens, brown rice, and a bright cucumber crunch.',
@@ -27,6 +28,7 @@ export const meals: Meal[] = [
     ],
   },
   {
+    locale: 'en',
     id: 'chickpea-pasta',
     name: 'Creamy lemon chickpea pasta',
     description: 'Silky lemon sauce, chickpeas, spinach, and plenty of fresh herbs.',
@@ -51,6 +53,7 @@ export const meals: Meal[] = [
     ],
   },
   {
+    locale: 'en',
     id: 'taco-tray',
     name: 'Smoky chicken taco tray',
     description: 'Sheet-pan chicken and peppers with warm tortillas and avocado-lime salsa.',

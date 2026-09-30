@@ -36,7 +36,7 @@ The primary flow is **Today → Choose → Cook → Confirm → Today**:
 4. **Confirm** collects a rating and optional note, previews every inventory adjustment, and commits only after confirmation.
 5. **Today** reports completion while Inventory and History reflect the committed result.
 
-**Inventory & profile** lets the household edit line-oriented constraints, goals, preferences, member context, and ingredients that form the next agent turn's application-owned context. Member context includes optional height and notes. Ingredient records keep the cooking amount and unit alongside optional package count, count unit, storage location, recorded date, and notes. **Refresh ideas** requests one stateless recommendation turn; the response replaces meal choices only after backend validation and identifies whether the model or deterministic fallback produced them.
+**Inventory & profile** lets the household edit line-oriented constraints, goals, preferences, member context, and ingredients that form the next agent turn's application-owned context. Member context includes optional height and notes. Ingredient records keep the cooking amount and unit alongside optional package count, count unit, storage location, recorded date, and notes. The interface supports stable `en` and `zh-CN` locales, defaults from the browser language when no choice has been saved, and provides an explicit selector that persists the choice. User-entered profile, inventory, history, and feedback text is preserved rather than translated automatically. **Refresh ideas** requests one stateless recommendation turn in the selected locale; the response replaces meal choices only after backend validation and records the generated locale.
 
 The main navigation exposes Today, Inventory, and History throughout the experience. The cooking states remain grouped under Today so navigation communicates that they belong to one task.
 
@@ -53,6 +53,8 @@ The main navigation exposes Today, Inventory, and History throughout the experie
 - Invalid selected meal identifiers returned by the API MUST fall back to Today safely.
 - Household and inventory edits MUST adopt only successful API responses.
 - Recommendation refresh MUST preserve current choices on failure and disclose deterministic fallback use.
+- Core interface copy MUST be complete in English and Simplified Chinese, with English fallback when a translation key is missing.
+- Recommendation generation MUST request the selected stable locale and preserve user-entered text unchanged.
 - The client MUST NOT expose model tools, persistent agent sessions, or direct mutation authority.
 
 ## Persistence and Data Boundaries
@@ -61,7 +63,7 @@ The main navigation exposes Today, Inventory, and History throughout the experie
 
 `getMealState` in `src/lib/api.ts` concurrently requests `GET /api/v1/household`, `GET /api/v1/inventory`, `GET /api/v1/meals`, and `GET /api/v1/history`, then assembles their typed payloads into `MealState`. There is no aggregate-state fallback. The initial view remains loading until all four resources succeed. A failure from any resource keeps the error visible and retries the complete read set. The API is the persistence boundary.
 
-Profile and inventory forms call `PUT /api/v1/household`, `PUT /api/v1/inventory/{id}`, and `DELETE /api/v1/inventory/{id}`. The household update sends `members`, `constraints`, `goals`, and `preferences`; the household name is read-only and is not included. Inventory updates preserve optional count, count unit, storage, recorded date, and note metadata. The forms adopt the returned resource only after success. `POST /api/v1/recommendations/generate` performs the focused agent turn; `App` replaces recommendations from its validated response, clears an obsolete active meal, and presents the returned `model` or `fallback` source.
+Profile and inventory forms call `PUT /api/v1/household`, `PUT /api/v1/inventory/{id}`, and `DELETE /api/v1/inventory/{id}`. The household update sends `members`, `constraints`, `goals`, and `preferences`; the household name is read-only and is not included. Inventory updates preserve optional count, count unit, storage, recorded date, and note metadata. The forms adopt the returned resource only after success. `POST /api/v1/recommendations/generate` sends `{ locale }` for the selected stable locale; `App` replaces recommendations from its validated response, clears an obsolete active meal, and presents the returned `model` or `fallback` source. API fields and error codes remain language-neutral; the client maps known capability codes to localized display copy.
 
 Meal selection remains local during the cooking flow. `confirmMeal` sends `{ rating, note }` to `POST /api/v1/meals/{mealId}/confirm`. After a successful response, `App` preserves the existing household and meal recommendations while replacing inventory, history, and selected meal identity with the returned authoritative fields. `VITE_API_BASE_URL` configures a separate API origin and defaults to same-origin requests.
 
@@ -69,7 +71,7 @@ Meal selection remains local during the cooking flow. `confirmMeal` sends `{ rat
 
 ## Interaction and Accessibility Constraints
 
-`Shell` provides the persistent desktop navigation and compact mobile navigation. Both navigation variants expose the active page semantically. Screen components preserve semantic headings, labels, keyboard focus, non-color status cues, and reduced-motion behavior. Today derives its date and time-of-day greeting from the browser rather than presenting fixture copy.
+`Shell` provides the persistent desktop navigation, compact mobile navigation, and language selector. Both navigation variants expose the active page semantically. `I18nProvider` resolves `src/locales/en.ts` and `src/locales/zh-CN.ts`, persists an explicit choice, sets the document language, and falls back to English for missing keys. Screen components preserve semantic headings, labels, keyboard focus, non-color status cues, and reduced-motion behavior. Today derives its localized date and time-of-day greeting from the browser rather than presenting fixture copy.
 
 `ConfirmMeal` requires one of the supported ratings, accepts an optional bounded note, and exposes the before-and-after quantity for each used ingredient. `Inventory` provides case-insensitive search, category filters, low-stock labels, an explicit empty state, one-entry-per-line guidance editors, member editors, optional ingredient metadata fields, and compact metadata labels on ingredient cards. `History` presents newest entries first and summarizes positive feedback.
 

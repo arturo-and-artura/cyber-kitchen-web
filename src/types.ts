@@ -1,3 +1,5 @@
+export type Locale = 'en' | 'zh-CN'
+
 export type View = 'today' | 'choose' | 'cook' | 'confirm' | 'inventory' | 'history'
 
 export type Rating = 'loved' | 'okay' | 'not-for-us'
@@ -41,6 +43,7 @@ export type MealIngredient = {
 }
 
 export type Meal = {
+  locale: Locale
   id: string
   name: string
   description: string
